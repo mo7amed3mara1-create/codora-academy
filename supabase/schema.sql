@@ -3,8 +3,9 @@
 -- Supabase PostgreSQL with Row Level Security (RLS)
 -- ========================================================
 
--- Enable UUID extension if not enabled
+-- Enable UUID and pgcrypto extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- 1. Create Enums for Grades, Packages, and Status
 CREATE TYPE student_grade AS ENUM (
