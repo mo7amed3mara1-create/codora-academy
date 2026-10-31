@@ -1,0 +1,140 @@
+-- ========================================================
+-- كودورا أكاديمي - Codora Academy Database Schema
+-- Supabase PostgreSQL with Row Level Security (RLS)
+-- ========================================================
+
+-- Enable UUID extension if not enabled
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. Create Enums for Grades, Packages, and Status
+CREATE TYPE student_grade AS ENUM (
+    'الصف الأول الثانوي',
+    'الصف الثاني الثانوي',
+    'الصف الثالث الثانوي'
+);
+
+CREATE TYPE course_package AS ENUM (
+    'شهر',
+    'ترم',
+    'سنة'
+);
+
+CREATE TYPE registration_status AS ENUM (
+    'جديد',
+    'تم التواصل',
+    'تم الدفع',
+    'مؤكد',
+    'ملغي'
+);
+
+-- 2. Create Registrations Table
+CREATE TABLE IF NOT EXISTS public.registrations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    full_name TEXT NOT NULL,
+    student_phone VARCHAR(11) NOT NULL,
+    parent_phone VARCHAR(11) NOT NULL,
+    grade TEXT NOT NULL,
+    governorate TEXT NOT NULL,
+    school TEXT DEFAULT NULL,
+    package TEXT NOT NULL,
+    notes TEXT DEFAULT NULL,
+    consent_agreed BOOLEAN NOT NULL DEFAULT TRUE,
+    status TEXT NOT NULL DEFAULT 'جديد',
+    admin_notes TEXT DEFAULT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    last_modified_by TEXT DEFAULT NULL,
+
+    -- Constraints
+    CONSTRAINT valid_student_phone CHECK (student_phone ~ '^01[0125][0-9]{8}$'),
+    CONSTRAINT valid_parent_phone CHECK (parent_phone ~ '^01[0125][0-9]{8}$')
+);
+
+-- Unique constraint on student phone to prevent duplicate registrations
+CREATE UNIQUE INDEX IF NOT EXISTS idx_registrations_student_phone ON public.registrations (student_phone);
+
+-- Index for searching and filtering
+CREATE INDEX IF NOT EXISTS idx_registrations_status ON public.registrations (status);
+CREATE INDEX IF NOT EXISTS idx_registrations_grade ON public.registrations (grade);
+CREATE INDEX IF NOT EXISTS idx_registrations_package ON public.registrations (package);
+CREATE INDEX IF NOT EXISTS idx_registrations_governorate ON public.registrations (governorate);
+CREATE INDEX IF NOT EXISTS idx_registrations_created_at ON public.registrations (created_at DESC);
+
+-- 3. Create Audit Logs Table
+CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    registration_id UUID REFERENCES public.registrations(id) ON DELETE CASCADE,
+    student_name TEXT NOT NULL,
+    action TEXT NOT NULL,
+    previous_status TEXT,
+    new_status TEXT,
+    notes_added TEXT,
+    performed_by TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.admin_audit_logs (created_at DESC);
+
+-- 4. Enable Row Level Security (RLS) on both tables
+ALTER TABLE public.registrations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- 5. RLS Policies for `registrations`:
+-- Policy 1: Anyone (ANON / public) can INSERT their registration
+CREATE POLICY "Allow public anon inserts only"
+ON public.registrations
+FOR INSERT
+TO anon
+WITH CHECK (
+    full_name IS NOT NULL AND
+    student_phone ~ '^01[0125][0-9]{8}$' AND
+    parent_phone ~ '^01[0125][0-9]{8}$' AND
+    consent_agreed = TRUE
+);
+
+-- Policy 2: Public anon CANNOT SELECT student records (protect student privacy)
+-- Anon selects will return 0 rows. Only authenticated users (Admins) can SELECT.
+CREATE POLICY "Deny public anon selects"
+ON public.registrations
+FOR SELECT
+TO anon
+USING (false);
+
+-- Policy 3: Authenticated Admin users have full control (SELECT, INSERT, UPDATE, DELETE)
+CREATE POLICY "Allow authenticated admins full access"
+ON public.registrations
+FOR ALL
+TO authenticated
+USING (true)
+WITH CHECK (true);
+
+-- 6. RLS Policies for `admin_audit_logs`:
+CREATE POLICY "Only authenticated admins can read logs"
+ON public.admin_audit_logs
+FOR SELECT
+TO authenticated
+USING (true);
+
+CREATE POLICY "Only authenticated admins can write logs"
+ON public.admin_audit_logs
+FOR INSERT
+TO authenticated
+WITH CHECK (true);
+
+-- 7. Trigger to automatically update updated_at timestamp
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = timezone('utc'::text, now());
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER on_registration_updated
+    BEFORE UPDATE ON public.registrations
+    FOR EACH ROW
+    EXECUTE PROCEDURE public.handle_updated_at();
+
+-- Comment on tables for documentation
+COMMENT ON TABLE public.registrations IS 'قاعدة بيانات تسجيل طلاب كودورا أكاديمي مع RLS كامل لحماية الخصوصية';
+COMMENT ON TABLE public.admin_audit_logs IS 'سجل تدقيق وتتبع تعديلات الأدمن على تسجيلات الطلاب';
