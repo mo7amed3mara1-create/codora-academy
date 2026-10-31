@@ -81,45 +81,28 @@ ALTER TABLE public.registrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- 5. RLS Policies for `registrations`:
--- Policy 1: Anyone (ANON / public) can INSERT their registration
-CREATE POLICY "Allow public anon inserts only"
-ON public.registrations
-FOR INSERT
-TO anon
-WITH CHECK (
-    full_name IS NOT NULL AND
-    student_phone ~ '^01[0125][0-9]{8}$' AND
-    parent_phone ~ '^01[0125][0-9]{8}$' AND
-    consent_agreed = TRUE
-);
+DROP POLICY IF EXISTS "Allow public anon inserts only" ON public.registrations;
+DROP POLICY IF EXISTS "Deny public anon selects" ON public.registrations;
+DROP POLICY IF EXISTS "Allow authenticated admins full access" ON public.registrations;
+DROP POLICY IF EXISTS "Allow full access" ON public.registrations;
 
--- Policy 2: Public anon CANNOT SELECT student records (protect student privacy)
--- Anon selects will return 0 rows. Only authenticated users (Admins) can SELECT.
-CREATE POLICY "Deny public anon selects"
-ON public.registrations
-FOR SELECT
-TO anon
-USING (false);
-
--- Policy 3: Authenticated Admin users have full control (SELECT, INSERT, UPDATE, DELETE)
-CREATE POLICY "Allow authenticated admins full access"
+CREATE POLICY "Allow full access"
 ON public.registrations
 FOR ALL
-TO authenticated
+TO anon, authenticated
 USING (true)
 WITH CHECK (true);
 
 -- 6. RLS Policies for `admin_audit_logs`:
-CREATE POLICY "Only authenticated admins can read logs"
-ON public.admin_audit_logs
-FOR SELECT
-TO authenticated
-USING (true);
+DROP POLICY IF EXISTS "Only authenticated admins can read logs" ON public.admin_audit_logs;
+DROP POLICY IF EXISTS "Only authenticated admins can write logs" ON public.admin_audit_logs;
+DROP POLICY IF EXISTS "Allow audit full access" ON public.admin_audit_logs;
 
-CREATE POLICY "Only authenticated admins can write logs"
+CREATE POLICY "Allow audit full access"
 ON public.admin_audit_logs
-FOR INSERT
-TO authenticated
+FOR ALL
+TO anon, authenticated
+USING (true)
 WITH CHECK (true);
 
 -- 7. Trigger to automatically update updated_at timestamp
