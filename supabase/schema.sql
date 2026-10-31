@@ -138,3 +138,39 @@ CREATE TRIGGER on_registration_updated
 -- Comment on tables for documentation
 COMMENT ON TABLE public.registrations IS 'قاعدة بيانات تسجيل طلاب كودورا أكاديمي مع RLS كامل لحماية الخصوصية';
 COMMENT ON TABLE public.admin_audit_logs IS 'سجل تدقيق وتتبع تعديلات الأدمن على تسجيلات الطلاب';
+
+-- 8. Create Admin User in Supabase Auth automatically
+-- Username: emara_admin (email: emara_admin@codora.edu)
+-- Password: %Mo7amed%2009%
+DO $$
+DECLARE
+    admin_uid UUID := gen_random_uuid();
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'emara_admin@codora.edu') THEN
+        INSERT INTO auth.users (
+            instance_id,
+            id,
+            aud,
+            role,
+            email,
+            encrypted_password,
+            email_confirmed_at,
+            raw_app_meta_data,
+            raw_user_meta_data,
+            created_at,
+            updated_at
+        ) VALUES (
+            '00000000-0000-0000-0000-000000000000',
+            admin_uid,
+            'authenticated',
+            'authenticated',
+            'emara_admin@codora.edu',
+            crypt('%Mo7amed%2009%', gen_salt('bf')),
+            now(),
+            '{"provider":"email","providers":["email"]}',
+            '{"full_name":"م. محمد عمارة"}',
+            now(),
+            now()
+        );
+    END IF;
+END $$;
