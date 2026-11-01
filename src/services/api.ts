@@ -381,8 +381,8 @@ export async function adminLogin(identifier: string, password: string): Promise<
 
     const adminUser: AdminUser = {
       id: 'admin-codora-001',
-      email: `${configuredUsername}@codora.edu`,
-      username: configuredUsername,
+      email: cleanIdentifier.includes('@') ? cleanIdentifier : `${cleanIdentifier}@codora.edu`,
+      username: cleanIdentifier,
       name: 'م. محمد عمارة',
       role: 'super_admin'
     };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Eye, EyeOff, KeyRound, AlertTriangle, UserCheck, Lock } from 'lucide-react';
-import { adminLogin, checkIsLockedOut, isSupabaseConfigured } from '../services/api';
+import { Shield, Eye, EyeOff, KeyRound, AlertTriangle, UserCheck } from 'lucide-react';
+import { adminLogin, checkIsLockedOut } from '../services/api';
 import { AdminUser } from '../types';
 
 interface AdminLoginProps {
@@ -46,8 +46,8 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
           setLockoutMinutes(checkStatus.minutesLeft);
         }
       }
-    } catch {
-      setErrorMessage('حدث خطأ أثناء تسجيل الدخول.');
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'حدث خطأ أثناء تسجيل الدخول.');
     } finally {
       setIsLoading(false);
     }
