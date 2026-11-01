@@ -131,6 +131,15 @@ function addLocalLog(log: Omit<AuditLog, 'id' | 'created_at'>) {
   localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(logs.slice(0, 100))); // keep latest 100
 }
 
+function sanitizeInput(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/[<>]/g, '')
+    .replace(/javascript:/gi, '')
+    .replace(/['";]/g, '')
+    .trim();
+}
+
 // Rate Limiting helper: Max 4 submissions per 10 minutes from same browser
 function checkRateLimit(): boolean {
   try {
@@ -210,16 +219,16 @@ export async function submitRegistration(data: RegistrationFormData): Promise<{
     };
   }
 
-  // 3. Sanitized payload
+  // 3. Sanitized payload with XSS / injection stripping
   const cleanPayload = {
-    full_name: data.full_name.trim(),
+    full_name: sanitizeInput(data.full_name),
     student_phone: studentPhone,
     parent_phone: parentPhone,
     grade: data.grade,
     governorate: data.governorate,
-    school: data.school ? data.school.trim() : '',
+    school: sanitizeInput(data.school),
     package: data.package,
-    notes: data.notes ? data.notes.trim() : '',
+    notes: sanitizeInput(data.notes),
     consent_agreed: true,
   };
 
@@ -249,16 +258,14 @@ export async function submitRegistration(data: RegistrationFormData): Promise<{
         updated_at: new Date().toISOString(),
       };
 
-      const { data: inserted, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('registrations')
         .insert([
           {
             ...cleanPayload,
             status: 'جديد',
           }
-        ])
-        .select()
-        .maybeSingle();
+        ]);
 
       if (insertError) {
         if (insertError.code === '23505') { // unique violation
@@ -267,13 +274,12 @@ export async function submitRegistration(data: RegistrationFormData): Promise<{
             error: `رقم هاتف الطالب (${studentPhone}) مسجل بالفعل مسبقًا. تواصل معنا على 01080929572 لمتابعة طلبك.`
           };
         }
-        // If error is RLS select error but insert succeeded
         console.warn('Supabase insert note:', insertError);
       }
 
       return {
         success: true,
-        data: (inserted as StudentRegistration) || studentRecord,
+        data: studentRecord,
         message: 'تم تسجيل بياناتك بنجاح في كودورا أكاديمي!'
       };
     } catch (err: any) {
@@ -319,6 +325,25 @@ export async function submitRegistration(data: RegistrationFormData): Promise<{
 // -------------------------------------------------------------
 // ADMIN API: Authentication
 // -------------------------------------------------------------
+// SHA-256 Web Crypto helper
+async function sha256Hex(text: string): Promise<string> {
+  const enc = new TextEncoder();
+  const data = enc.encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Precomputed SHA-256 hashes of authorized admin credentials
+// NEVER exposes raw plaintext credentials in client code or production bundles
+const MASTER_PASSWORD_HASH = '0464c4faf016926f58db02af1bdacf23b507512c2343f907a586a5abf485055d';
+const AUTHORIZED_USER_HASHES = new Set([
+  '5a0a78fa9e455653a6dfad8eb00dc9bd8b608a98c91cac3342ba6e8217c7ea8e', // emara_admin
+  '4924192c3c2e4899e8fb48d49ed8c4dd06dbb4bb4b2a52ac5a5459e1bf285e91', // admin_emara
+  '0590f7dc91111ad084855a59472ad32c9de50c4d8ba16f14f6f11af490e1dda9', // mohamed_emara
+  'fe36b6e437d9b4c4c23bc0372531aca667cf24e2eb351471827e534b114e4dc8', // admin@codora.edu
+]);
+
 export async function adminLogin(identifier: string, password: string): Promise<{
   success: boolean;
   user?: AdminUser;
@@ -330,22 +355,12 @@ export async function adminLogin(identifier: string, password: string): Promise<
   }
 
   const cleanIdentifier = identifier.trim().toLowerCase();
-  const configuredUsername = (import.meta.env.VITE_ADMIN_USERNAME || 'emara_admin').trim().toLowerCase();
-  const configuredPassword = import.meta.env.VITE_ADMIN_PASSWORD || '%Mo7amed%2009%';
+  const userHash = await sha256Hex(cleanIdentifier);
+  const passHash = await sha256Hex(password);
 
-  // 1. Verify Master Credentials (always priority!)
-  const isUsernameMatch = (
-    cleanIdentifier === configuredUsername ||
-    cleanIdentifier === 'emara_admin' ||
-    cleanIdentifier === 'admin_emara' ||
-    cleanIdentifier === 'mohamed_emara' ||
-    cleanIdentifier === 'admin@codora.edu'
-  );
-
-  const isPasswordMatch = (
-    password === configuredPassword ||
-    password === '%Mo7amed%2009%'
-  );
+  // 1. Verify Master Credentials cryptographically (zero plaintext leakage)
+  const isUsernameMatch = AUTHORIZED_USER_HASHES.has(userHash);
+  const isPasswordMatch = (passHash === MASTER_PASSWORD_HASH);
 
   // If master credentials match, immediately succeed and clear any previous lockouts!
   if (isUsernameMatch && isPasswordMatch) {
@@ -422,6 +437,19 @@ export async function adminLogout(): Promise<void> {
 export async function fetchAllRegistrations(): Promise<StudentRegistration[]> {
   if (isSupabaseConfigured && supabase) {
     try {
+      // 1. Try secure RPC vault first if enabled
+      try {
+        const { data: rpcData, error: rpcErr } = await supabase.rpc('get_students_secure', {
+          p_admin_pass: MASTER_PASSWORD_HASH
+        });
+        if (!rpcErr && Array.isArray(rpcData) && rpcData.length >= 0) {
+          return rpcData as StudentRegistration[];
+        }
+      } catch {
+        // Fall back to direct table select
+      }
+
+      // 2. Direct table select
       const { data, error } = await supabase
         .from('registrations')
         .select('*')

@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Header } from './components/Header';
 import { StudentPage } from './components/StudentPage';
-import { AdminLogin } from './components/AdminLogin';
-import { AdminDashboard } from './components/AdminDashboard';
 import { Footer } from './components/Footer';
 import { AdminUser } from './types';
 import { getCachedAdminSession, adminLogout } from './services/api';
+
+// Code-split admin bundle: normal visitors will NEVER download the admin UI or code!
+const AdminLogin = lazy(() => import('./components/AdminLogin').then(m => ({ default: m.AdminLogin })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 
 // Secret path for admin gateway
 const SECRET_ADMIN_PATH = (import.meta.env.VITE_ADMIN_SECRET_PATH || '/emaraadmin').toLowerCase();
@@ -124,17 +126,26 @@ export const App: React.FC = () => {
         </header>
 
         <main className="flex-1 bg-slate-950/60 p-4">
-          {adminUser ? (
-            <AdminDashboard admin={adminUser} onLogout={handleLogout} />
-          ) : (
-            <AdminLogin
-              onLoginSuccess={handleLoginSuccess}
-              onBackToStudent={() => {
-                window.history.pushState({}, '', '/');
-                setIsAdminPage(false);
-              }}
-            />
-          )}
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center min-h-[300px] text-xs text-slate-400 gap-2">
+                <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                <span>جاري تحميل البوابة المشفرة...</span>
+              </div>
+            }
+          >
+            {adminUser ? (
+              <AdminDashboard admin={adminUser} onLogout={handleLogout} />
+            ) : (
+              <AdminLogin
+                onLoginSuccess={handleLoginSuccess}
+                onBackToStudent={() => {
+                  window.history.pushState({}, '', '/');
+                  setIsAdminPage(false);
+                }}
+              />
+            )}
+          </Suspense>
         </main>
       </div>
     );

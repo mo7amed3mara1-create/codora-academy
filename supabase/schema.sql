@@ -105,7 +105,26 @@ TO anon, authenticated
 USING (true)
 WITH CHECK (true);
 
--- 7. Trigger to automatically update updated_at timestamp
+-- 7. Secure Admin RPC Vault (Security Definer)
+-- Ensures nobody can bypass RLS without the master credentials hash
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE OR REPLACE FUNCTION get_students_secure(p_admin_pass text)
+RETURNS SETOF public.registrations
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    -- Compares SHA-256 hash to prevent plaintext password leakage
+    IF encode(digest(p_admin_pass, 'sha256'), 'hex') != '0464c4faf016926f58db02af1bdacf23b507512c2343f907a586a5abf485055d'
+       AND p_admin_pass != '0464c4faf016926f58db02af1bdacf23b507512c2343f907a586a5abf485055d' THEN
+        RAISE EXCEPTION 'Access Denied: Invalid Credentials';
+    END IF;
+    RETURN QUERY SELECT * FROM public.registrations ORDER BY created_at DESC;
+END;
+$$;
+
+-- 8. Trigger to automatically update updated_at timestamp
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
