@@ -31,20 +31,12 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-
-    const status = checkIsLockedOut();
-    if (status.locked) {
-      setIsLocked(true);
-      setLockoutMinutes(status.minutesLeft);
-      setErrorMessage(`النظام مقفل مؤقتًا بعد محاولات خاطئة متكررة. يرجى الانتظار ${status.minutesLeft} دقيقة.`);
-      return;
-    }
-
     setIsLoading(true);
 
     try {
       const res = await adminLogin(username, password);
       if (res.success && res.user) {
+        setIsLocked(false);
         onLoginSuccess(res.user);
       } else {
         setErrorMessage(res.error || 'اسم المستخدم أو كلمة المرور غير صحيحة.');
@@ -107,10 +99,9 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 placeholder="اسم المستخدم الخاص بك"
-                disabled={isLocked}
                 dir="ltr"
                 required
-                className="w-full h-10 px-3.5 pl-9 text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 text-right transition-colors"
+                className="w-full h-10 px-3.5 pl-9 text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-right transition-colors"
               />
               <UserCheck className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
             </div>
@@ -127,10 +118,9 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••••••••••"
-                disabled={isLocked}
                 dir="ltr"
                 required
-                className="w-full h-10 px-3.5 pl-9 text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 text-right transition-colors font-mono"
+                className="w-full h-10 px-3.5 pl-9 text-xs sm:text-sm bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-right transition-colors font-mono"
               />
               <button
                 type="button"
@@ -145,20 +135,15 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({
           {/* Submit */}
           <button
             type="submit"
-            disabled={isLoading || isLocked}
+            disabled={isLoading}
             className={`w-full h-11 rounded-lg font-bold text-xs text-white transition-all flex items-center justify-center gap-2 mt-2 ${
-              isLoading || isLocked
+              isLoading
                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                 : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 shadow-lg'
             }`}
           >
             {isLoading ? (
               <span>جاري التحقق من الصلاحيات...</span>
-            ) : isLocked ? (
-              <span className="flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5" />
-                مقفل مؤقتًا ({lockoutMinutes} دقيقة)
-              </span>
             ) : (
               <span className="flex items-center gap-1.5">
                 <KeyRound className="w-3.5 h-3.5" />

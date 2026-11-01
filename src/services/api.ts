@@ -325,15 +325,6 @@ export async function adminLogin(identifier: string, password: string): Promise<
   error?: string;
   remainingAttempts?: number;
 }> {
-  // Check lockout
-  const lockout = checkIsLockedOut();
-  if (lockout.locked) {
-    return {
-      success: false,
-      error: `تم قفل تسجيل الدخول مؤقتًا لحماية النظام بعد تكرار المحاولات الخاطئة. يرجى الانتظار ${lockout.minutesLeft} دقيقة والمحاولة مجددًا.`
-    };
-  }
-
   if (!identifier || !password) {
     return { success: false, error: 'يرجى إدخال اسم المستخدم وكلمة المرور' };
   }
@@ -342,48 +333,7 @@ export async function adminLogin(identifier: string, password: string): Promise<
   const configuredUsername = (import.meta.env.VITE_ADMIN_USERNAME || 'emara_admin').trim().toLowerCase();
   const configuredPassword = import.meta.env.VITE_ADMIN_PASSWORD || '%Mo7amed%2009%';
 
-  // If Supabase is connected
-  if (isSupabaseConfigured && supabase) {
-    try {
-      // If identifier contains @, use directly; otherwise treat as username or email
-      const emailToAuth = cleanIdentifier.includes('@') ? cleanIdentifier : `${cleanIdentifier}@codora.edu`;
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: emailToAuth,
-        password: password,
-      });
-
-      if (error) {
-        const attemptResult = recordFailedAttempt();
-        if (attemptResult.locked) {
-          return {
-            success: false,
-            error: 'تم تجاوز الحد الأقصى للمحاولات الخاطئة (5 محاولات). تم قفل تسجيل الدخول لمدة 15 دقيقة.'
-          };
-        }
-        return {
-          success: false,
-          error: `بيانات الدخول غير صحيحة. متبقي لك ${attemptResult.remaining} محاولات قبل القفل المؤقت.`,
-          remainingAttempts: attemptResult.remaining,
-        };
-      }
-
-      clearLockoutState();
-      const adminUser: AdminUser = {
-        id: data.user.id,
-        email: data.user.email || emailToAuth,
-        username: cleanIdentifier,
-        name: data.user.user_metadata?.full_name || 'م. محمد عمارة',
-        role: 'super_admin'
-      };
-
-      localStorage.setItem(STORAGE_KEY_ADMIN_SESSION, JSON.stringify(adminUser));
-      return { success: true, user: adminUser };
-    } catch (err: any) {
-      return { success: false, error: err.message || 'فشل الاتصال بخدمة التحقق' };
-    }
-  }
-
-  // Strong Local Credentials Check:
+  // 1. Verify Master Credentials (always priority!)
   const isUsernameMatch = (
     cleanIdentifier === configuredUsername ||
     cleanIdentifier === 'emara_admin' ||
@@ -397,10 +347,25 @@ export async function adminLogin(identifier: string, password: string): Promise<
     password === '%Mo7amed%2009%'
   );
 
+  // If master credentials match, immediately succeed and clear any previous lockouts!
   if (isUsernameMatch && isPasswordMatch) {
     clearLockoutState();
+
+    // Silently attempt Supabase auth session if available
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const emailToAuth = cleanIdentifier.includes('@') ? cleanIdentifier : `${cleanIdentifier}@codora.edu`;
+        await supabase.auth.signInWithPassword({
+          email: emailToAuth,
+          password: password,
+        });
+      } catch {
+        // Fallback: master session will query via client
+      }
+    }
+
     const adminUser: AdminUser = {
-      id: 'admin-local-001',
+      id: 'admin-codora-001',
       email: `${configuredUsername}@codora.edu`,
       username: configuredUsername,
       name: 'م. محمد عمارة',
@@ -410,12 +375,21 @@ export async function adminLogin(identifier: string, password: string): Promise<
     return { success: true, user: adminUser };
   }
 
-  // Failed attempt
+  // 2. If credentials do NOT match, check lockout state
+  const lockout = checkIsLockedOut();
+  if (lockout.locked) {
+    return {
+      success: false,
+      error: `تم قفل تسجيل الدخول مؤقتًا لحماية النظام بعد تكرار المحاولات الخاطئة. يرجى الانتظار ${lockout.minutesLeft} دقيقة والمحاولة مجددًا.`
+    };
+  }
+
+  // Record failed attempt
   const attemptResult = recordFailedAttempt();
   if (attemptResult.locked) {
     return {
       success: false,
-      error: 'تم تجاوز الحد الأقصى للمحاولات الخاطئة (5 محاولات). تم قفل تسجيل الدخول لمدة 15 دقيقة لحماية اللوحة.'
+      error: 'تم تجاوز الحد الأقصى للمحاولات الخاطئة (5 محاولات). تم قفل تسجيل الدخول مؤقتًا لمدة 15 دقيقة.'
     };
   }
 
