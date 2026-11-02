@@ -44,7 +44,7 @@ export const Footer: React.FC<FooterProps> = ({ onSecretAdminClick }) => {
             كودورا أكاديمي
           </span>
           <span className="text-[11px] text-slate-400">
-            دروس البرمجة وتكنولوجيا المعلومات للثانوية العامة • إشراف م. محمد عمارة
+            دروس البرمجة وتكنولوجيا المعلومات للثانوية العامة • إشراف: م. محمد عمارة &amp; م. عمر خالد
           </span>
         </div>
 

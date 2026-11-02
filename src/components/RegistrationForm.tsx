@@ -107,7 +107,7 @@ export const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSuccess })
             استمارة حجز الحصة المجانية
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            املأ البيانات وسيقوم فريق المتابعة بالتواصل لتأكيد الموعد.
+            إشراف: م. محمد عمارة &amp; م. عمر خالد • املأ البيانات وسنتواصل معك لتأكيد الموعد
           </p>
         </div>
         <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200/70 shrink-0">

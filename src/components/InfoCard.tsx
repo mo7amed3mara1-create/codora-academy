@@ -34,28 +34,69 @@ export const InfoCard: React.FC = () => {
   return (
     <div className="space-y-4 text-right">
       
-      {/* Instructor Profile Card */}
+      {/* Instructors Profile Card */}
       <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-subtle">
-        <div className="flex items-center gap-3.5">
-          <div className="w-14 h-14 rounded-full overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
-            <img 
-              src="/assets/mohamed-emara.jpg" 
-              alt="م. محمد عمارة" 
-              className="w-full h-full object-cover"
-            />
+        <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-slate-100">
+          <div className="flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5 text-slate-700" />
+            <h4 className="font-bold text-xs text-slate-900">
+              فريق الإشراف والتدريس
+            </h4>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-sm sm:text-base text-slate-900">
-                إشراف: م. محمد عمارة
-              </h3>
-              <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-                مشرف المادة
-              </span>
+          <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+            إشراف مشترك
+          </span>
+        </div>
+
+        <div className="space-y-3.5">
+          {/* Mohamed Emara */}
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
+              <img 
+                src="/assets/mohamed-emara.jpg" 
+                alt="م. محمد عمارة" 
+                className="w-full h-full object-cover"
+              />
             </div>
-            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-              مهندس برمجيات متخصص في تبسيط علوم الحاسب ومنهج البرمجة لطلاب الثانوية العامة من التأسيس حتى الامتحان النهائي.
-            </p>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h5 className="font-bold text-xs sm:text-sm text-slate-900">
+                  م. محمد عمارة
+                </h5>
+                <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                  مشرف ومحاضر المادة
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                مهندس برمجيات متخصص في تبسيط علوم الحاسب ومنهج البرمجة لطلاب الثانوية العامة.
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100" />
+
+          {/* Omar Khaled */}
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
+              <img 
+                src="/assets/omar-khaled.jpg" 
+                alt="م. عمر خالد" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h5 className="font-bold text-xs sm:text-sm text-slate-900">
+                  م. عمر خالد
+                </h5>
+                <span className="text-[10px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                  مشرف ومحاضر المادة
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                مهندس برمجيات متخصص في التدريب العملي وبناء المشاريع والتدريب على نماذج الامتحانات.
+              </p>
+            </div>
           </div>
         </div>
       </div>

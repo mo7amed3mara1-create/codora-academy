@@ -383,7 +383,7 @@ export async function adminLogin(identifier: string, password: string): Promise<
       id: 'admin-codora-001',
       email: cleanIdentifier.includes('@') ? cleanIdentifier : `${cleanIdentifier}@codora.edu`,
       username: cleanIdentifier,
-      name: 'م. محمد عمارة',
+      name: 'م. محمد عمارة & م. عمر خالد',
       role: 'super_admin'
     };
     localStorage.setItem(STORAGE_KEY_ADMIN_SESSION, JSON.stringify(adminUser));

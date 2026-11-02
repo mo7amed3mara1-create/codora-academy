@@ -36,7 +36,7 @@ export const StudentPage: React.FC = () => {
           دروس البرمجة للثانوية العامة
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 mt-1.5 font-medium">
-          مادة الحاسب وتكنولوجيا المعلومات • إشراف م. محمد عمارة • <span className="text-emerald-700 font-bold">أول سيشن مجانية بالكامل</span>
+          مادة الحاسب وتكنولوجيا المعلومات • إشراف: م. محمد عمارة &amp; م. عمر خالد • <span className="text-emerald-700 font-bold">أول سيشن مجانية بالكامل</span>
         </p>
       </div>
 

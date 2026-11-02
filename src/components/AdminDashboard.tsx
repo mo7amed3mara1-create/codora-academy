@@ -309,7 +309,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ admin, onLogout 
                 لوحة تحكم المشرفين | كودورا أكاديمي
               </h1>
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
-                إشراف م. محمد عمارة
+                إشراف: م. محمد عمارة &amp; م. عمر خالد
               </span>
             </div>
             <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
